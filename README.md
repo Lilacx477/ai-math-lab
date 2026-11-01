@@ -13,7 +13,8 @@ The first benchmark is the one-dimensional Poisson equation with homogeneous Dir
 - **Human reviewer**: mathematical specification, interpretation, and final acceptance.
 
 Project-wide agent instructions are in `AGENTS.md`.
-The current mathematical specification and acceptance criteria are in `BENCHMARK.md`.
+The mathematical specifications and acceptance criteria are in `BENCHMARK.md`
+(Poisson) and `BENCHMARK-002.md` (heat equation).
 
 ## Python setup
 
@@ -106,3 +107,42 @@ lake build
 The numerical checks provide evidence of second-order convergence. The Lean
 theorem verifies the separate quadratic algebraic identity; it is not a formal
 proof of convergence of the Python solver.
+
+## Benchmark 002: heat equation with FTCS
+
+`src/ai_math_lab/heat.py` solves `u_t = u_xx` with zero Dirichlet boundaries.
+It reuses `uniform_grid(n)` with `h = 1/(n+1)`. `ftcs_step(u, mu)` applies
+the weights `(mu, 1-2*mu, mu)` to full states, keeping both endpoints exactly
+zero and leaving the input unchanged. Nonzero input boundary values are rejected.
+The step permits `mu > 1/2` for the specified instability experiment.
+
+`solve_heat(n, T, mu_target=0.4, initial_state=None)` uses the sine initial
+condition by default, or accepts a full state of length `n+2`. Its stable target
+must satisfy `0 < mu_target <= 1/2`. For positive `T`, it chooses
+`steps = ceil(T/(mu_target*h²))`, then `dt = T/steps`, adding a step if needed
+to keep the effective `mu = dt/h² <= mu_target` despite roundoff. Thus the
+uniform time grid reaches `T` without accumulated time rounding. The returned
+`HeatSolution` provides `x`, `u`, `time`, `dt`, `steps`, and effective `mu`.
+At `T=0`, it returns the initial state with zero steps.
+
+The tests compare against `exp(-pi²*T)*sin(pi*x)` at `T=0.01`. Refinement with
+`n = 15, 31, 63` and target `mu=0.4` must give decreasing maximum interior errors
+and orders above `1.8` and within `0.2` of two. The controlled unstable test
+uses the specified highest-frequency sine mode at `n=63`, `mu=0.6`, and checks
+its analytic amplification factor.
+
+`AIMathLab/Heat.lean` formalizes the local update over the reals and proves
+weight nonnegativity, weight sum, upper and lower bounds, and interval
+preservation for `0 <= mu <= 1/2`, without `sorry`. Python cross-validation
+probes the production weights and checks the same interval-preservation property.
+These tests connect the implementation to the local formal mechanism; they do
+not constitute a formal proof of the full numerical solver or its convergence.
+
+Run Benchmark 002 tests alone with `uv run pytest tests/test_heat.py`.
+Run the complete validation from the repository root:
+
+```powershell
+uv run pytest
+uv run ruff check .
+lake build
+```
