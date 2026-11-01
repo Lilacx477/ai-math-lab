@@ -71,3 +71,38 @@ q(x)=\frac{x(1-x)}{2}.
 \]
 
 See `BENCHMARK.md` for the precise conventions and Milestone 1 acceptance criteria.
+
+## Milestone 1 implementation
+
+The numerical implementation is in `src/ai_math_lab/poisson.py`.
+`uniform_grid(n)` uses `n` interior points and spacing `h = 1/(n+1)`.
+`poisson_matrix(n)` constructs the dense interior matrix with diagonal `2/h²`
+and adjacent entries `-1/h²`. `solve_poisson(n)` solves the sine manufactured
+problem and returns `(x, u)`, both of length `n+2`, including the endpoints
+and their prescribed zero solution values. The interior solution is `u[1:-1]`.
+
+Run the numerical tests and lint check from the repository root:
+
+```powershell
+uv run pytest
+uv run ruff check .
+```
+
+The tests in `tests/test_poisson.py` check the matrix, grid, boundary values,
+manufactured solution, scaled residual, and maximum interior error. Refinement
+uses `n = 15, 31, 63, 127`, so each step halves `h`. The observed orders must
+be within `0.05` of two, and errors must strictly decrease. Pytest is configured
+to import the implementation from `src/`.
+
+The formal benchmark is `AIMathLab.quadratic_centered_difference` in
+`AIMathLab/Poisson.lean`, exposed through `AIMathLab.lean`. It proves the exact
+negative centered-difference identity over all real `x` and all real `h ≠ 0`,
+without `sorry`. Check it with the pinned Lean toolchain and mathlib:
+
+```powershell
+lake build
+```
+
+The numerical checks provide evidence of second-order convergence. The Lean
+theorem verifies the separate quadratic algebraic identity; it is not a formal
+proof of convergence of the Python solver.
