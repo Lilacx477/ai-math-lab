@@ -1,1 +1,10 @@
 /.lake
+/.venv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.vscode/
+.DS_Store
+Thumbs.db
