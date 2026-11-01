@@ -50,6 +50,17 @@ def test_manufactured_solution_and_forcing():
     assert_allclose(forcing(x), np.pi**2 * expected, rtol=0.0, atol=1e-14)
 
 
+@pytest.mark.parametrize("n", [1, 2, 7, 30, 31, 63])
+def test_quadratic_centered_difference_matches_lean_identity(n):
+    """Cross-check AIMathLab.quadratic_centered_difference using the Python operator."""
+    x = uniform_grid(n)
+    q = x * (1.0 - x) / 2.0
+    # The zero boundary values require no correction to the interior right-hand side.
+    assert_array_equal(q[[0, -1]], [0.0, 0.0])
+    # Allow 1e-12 absolute error for cancellation in the h^-2-scaled matrix product.
+    assert_allclose(poisson_matrix(n) @ q[1:-1], np.ones(n), rtol=0.0, atol=1e-12)
+
+
 def test_single_interior_point_solution():
     # At x=1/2 the equation is 8*u_1 = pi^2, not the continuous value u=1.
     _, u = solve_poisson(1)
